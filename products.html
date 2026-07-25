@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collection — Atelier Noir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .filters { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:46px; }
+  .filter-btn {
+    padding:9px 18px; font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+    border:1px solid var(--line); background:#fff; cursor:pointer; font-family:inherit; color:var(--ink);
+  }
+  .filter-btn.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">Atelier Noir</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="products.html" class="active">Collection</a></li>
+      <li><a href="checkout.html">Checkout</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+  </div>
+</nav>
+
+<section class="section" style="padding-top:56px;">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">Full collection</span>
+        <h2>All pieces</h2>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="shirts">Shirts</button>
+      <button class="filter-btn" data-filter="pants">Pants</button>
+      <button class="filter-btn" data-filter="jackets">Jackets</button>
+      <button class="filter-btn" data-filter="shoes">Shoes</button>
+    </div>
+
+    <div class="grid" id="products-grid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="width:100%; display:flex; justify-content:space-between; flex-wrap:wrap; gap:14px;">
+    <span>&copy; 2026 Atelier Noir — Graduation Project</span>
+    <span>Built with n8n · Google Sheets · Telegram</span>
+  </div>
+</footer>
+
+<div id="chatbot-placeholder" title="Chat with us">&#128172;</div>
+
+<script src="script.js"></script>
+</body>
+</html>
