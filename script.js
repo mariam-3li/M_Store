@@ -8,7 +8,7 @@
    ========================================================= */
 
 /* ---- Replace this with your real n8n Production Webhook URL ---- */
-const WEBHOOK_URL = "https://YOUR-N8N-WEBHOOK-URL";
+const WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook-test/dd11b9b7-74f5-4f46-8b4d-9bd9aea23a0f";
 
 const PRODUCTS = [
   {
