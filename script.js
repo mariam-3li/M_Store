@@ -8,10 +8,10 @@
    ========================================================= */
 
 /* ---- Replace this with your real n8n Production Webhook URL (orders) ---- */
-const WEBHOOK_URL = "https://YOUR-N8N-WEBHOOK-URL";
+const WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook/chatbot";
 
 /* ---- Replace this with your n8n chatbot Webhook URL (separate workflow) ---- */
-const CHAT_WEBHOOK_URL = "https://YOUR-N8N-CHAT-WEBHOOK-URL";
+const CHAT_WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook/chatbot";
 
 /* A simple per-tab session id, sent with every chat message so your n8n
    workflow can keep conversation memory per visitor if you want to. */
