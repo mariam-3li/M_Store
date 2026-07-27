@@ -11,7 +11,7 @@
 const WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook/dd11b9b7-74f5-4f46-8b4d-9bd9aea23a0f";
 
 /* ---- Replace this with your n8n chatbot Webhook URL (separate workflow) ---- */
-const CHAT_WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook/chatbot";
+const CHAT_WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook-test/chatbot";
 
 /* A simple per-tab session id, sent with every chat message so your n8n
    workflow can keep conversation memory per visitor if you want to. */
