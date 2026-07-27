@@ -409,6 +409,7 @@ function initChatbotPlaceholder() {
       document.querySelector(".chat-msg-typing")?.remove();
       appendChatMessage(reply, "bot");
     } catch (err) {
+       console.error(err);
       document.querySelector(".chat-msg-typing")?.remove();
       appendChatMessage(
         "Could not reach the chat assistant. Check CHAT_WEBHOOK_URL in script.js.",
