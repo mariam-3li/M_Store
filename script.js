@@ -7,8 +7,22 @@
      Orders are sent straight to the n8n Webhook node.
    ========================================================= */
 
-/* ---- Replace this with your real n8n Production Webhook URL ---- */
-const WEBHOOK_URL = "https://mariam-3li.app.n8n.cloud/webhook-test/dd11b9b7-74f5-4f46-8b4d-9bd9aea23a0f";
+/* ---- Replace this with your real n8n Production Webhook URL (orders) ---- */
+const WEBHOOK_URL = "https://YOUR-N8N-WEBHOOK-URL";
+
+/* ---- Replace this with your n8n chatbot Webhook URL (separate workflow) ---- */
+const CHAT_WEBHOOK_URL = "https://YOUR-N8N-CHAT-WEBHOOK-URL";
+
+/* A simple per-tab session id, sent with every chat message so your n8n
+   workflow can keep conversation memory per visitor if you want to. */
+const CHAT_SESSION_ID =
+  sessionStorage && sessionStorage.getItem("chat_session_id")
+    ? sessionStorage.getItem("chat_session_id")
+    : (() => {
+        const id = "sess_" + Math.random().toString(36).slice(2) + Date.now();
+        try { sessionStorage.setItem("chat_session_id", id); } catch (e) {}
+        return id;
+      })();
 
 const PRODUCTS = [
   {
@@ -300,15 +314,110 @@ function initCheckout() {
   });
 }
 
-/* ---------- chatbot placeholder ----------
-   This bubble is a static placeholder. Replace this block with the
-   embed snippet from your n8n chat trigger / chat widget once the
-   "Website Chatbot" workflow (Task 4) is ready. */
+/* ---------- chatbot widget ----------
+   The bubble (#chatbot-placeholder) already exists in every HTML page.
+   This function builds the chat panel entirely in JS and injects it
+   next to the bubble, so no HTML file needs to change:
+     - a message list (chat box)
+     - a text input field
+     - a send button
+   On send, the message is POSTed as JSON to CHAT_WEBHOOK_URL. The
+   n8n workflow should end with a "Respond to Webhook" node returning
+   JSON like { "reply": "..." } — that text is shown as the bot message. */
+function buildChatPanel() {
+  const panel = document.createElement("div");
+  panel.id = "chat-panel";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-label", "Customer support chat");
+  panel.innerHTML = `
+    <div class="chat-header">
+      <span>Support</span>
+      <button type="button" id="chat-close" aria-label="Close chat">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
+    <form class="chat-input-row" id="chat-form" novalidate>
+      <input type="text" id="chat-input" placeholder="Type a message…" autocomplete="off" required>
+      <button type="submit" id="chat-send">Send</button>
+    </form>`;
+  document.body.appendChild(panel);
+  return panel;
+}
+
+function appendChatMessage(text, from) {
+  const list = document.getElementById("chat-messages");
+  const bubble = document.createElement("div");
+  const kind = from === "user" ? "chat-msg-user" : from === "typing" ? "chat-msg-typing" : "chat-msg-bot";
+  bubble.className = "chat-msg " + kind;
+  bubble.textContent = text;
+  list.appendChild(bubble);
+  list.scrollTop = list.scrollHeight;
+}
+
 function initChatbotPlaceholder() {
   const bubble = document.getElementById("chatbot-placeholder");
   if (!bubble) return;
+
+  const panel = buildChatPanel();
+  const closeBtn = document.getElementById("chat-close");
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("chat-input");
+
+  let greeted = false;
+  const openPanel = () => {
+    panel.classList.add("open");
+    if (!greeted) {
+      appendChatMessage("Hi! Ask us anything about sizing, orders or shipping.", "bot");
+      greeted = true;
+    }
+    input.focus();
+  };
+  const closePanel = () => panel.classList.remove("open");
+
   bubble.addEventListener("click", () => {
-    alert("Chatbot placeholder — connect your n8n chat widget here.");
+    panel.classList.contains("open") ? closePanel() : openPanel();
+  });
+  closeBtn.addEventListener("click", closePanel);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendChatMessage(text, "user");
+    input.value = "";
+    input.disabled = true;
+
+    appendChatMessage("Typing…", "typing");
+
+    try {
+      const res = await fetch(CHAT_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          session_id: CHAT_SESSION_ID,
+          page: window.location.pathname,
+        }),
+      });
+
+      if (!res.ok) throw new Error("status " + res.status);
+
+      const data = await res.json();
+      const reply = (data && (data.reply || data.output || data.message)) ||
+        "Sorry, I didn't get a response from the assistant.";
+
+      document.querySelector(".chat-msg-typing")?.remove();
+      appendChatMessage(reply, "bot");
+    } catch (err) {
+      document.querySelector(".chat-msg-typing")?.remove();
+      appendChatMessage(
+        "Could not reach the chat assistant. Check CHAT_WEBHOOK_URL in script.js.",
+        "bot"
+      );
+    } finally {
+      input.disabled = false;
+      input.focus();
+    }
   });
 }
 
