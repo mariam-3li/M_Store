@@ -3,8 +3,9 @@
    - PRODUCTS: the in-memory product catalogue (mirrors the
      "Inventory" Google Sheet columns: product_id, product_name,
      price, stock_quantity, category)
-   - No data is persisted in the browser (no localStorage).
-     Orders are sent straight to the n8n Webhook node.
+   - Orders are sent straight to the n8n Webhook node.
+   - CART: persisted in localStorage so it survives navigation
+     between pages (Home / Products / Product / Cart / Checkout).
    ========================================================= */
 
 /* ---- Replace this with your real n8n Production Webhook URL (orders) ---- */
@@ -23,6 +24,9 @@ const CHAT_SESSION_ID =
         try { sessionStorage.setItem("chat_session_id", id); } catch (e) {}
         return id;
       })();
+
+/* Key used to store the cart in localStorage */
+const CART_STORAGE_KEY = "atelier_cart_v1";
 
 const PRODUCTS = [
   {
@@ -138,6 +142,113 @@ function initNavToggle() {
   btn.addEventListener("click", () => links.classList.toggle("open"));
 }
 
+/* ============================================================
+   CART
+   Stored as an object map { "<productId>": quantity } in
+   localStorage, e.g. { "1": 2, "4": 1 }. Quantities are always
+   clamped between 1 and the product's stock_quantity, so a
+   customer can pick MORE THAN ONE unit of the same product
+   (up to what's in stock) but never more than that.
+   ============================================================ */
+
+function getCart() {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCart(cart) {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  } catch (e) {
+    /* localStorage unavailable — cart just won't persist across pages */
+  }
+  updateCartBadge();
+}
+
+/* Adds `qty` units of a product to the cart, capped at its stock */
+function addToCart(productId, qty) {
+  const product = PRODUCTS.find((p) => p.id === productId);
+  if (!product) return;
+  const cart = getCart();
+  const current = cart[productId] || 0;
+  const next = Math.min(product.stock, Math.max(1, current + qty));
+  cart[productId] = next;
+  saveCart(cart);
+}
+
+/* Sets the exact quantity for a product already in the cart (used by the cart page) */
+function setCartQty(productId, qty) {
+  const product = PRODUCTS.find((p) => p.id === productId);
+  if (!product) return;
+  const cart = getCart();
+  const clamped = Math.max(1, Math.min(product.stock, qty || 1));
+  cart[productId] = clamped;
+  saveCart(cart);
+}
+
+function removeFromCart(productId) {
+  const cart = getCart();
+  delete cart[productId];
+  saveCart(cart);
+}
+
+function clearCart() {
+  saveCart({});
+}
+
+/* Returns [{ product, qty, lineTotal }, ...] for everything currently in the cart */
+function cartDetailed() {
+  const cart = getCart();
+  return Object.keys(cart)
+    .map((idStr) => {
+      const product = PRODUCTS.find((p) => p.id === parseInt(idStr, 10));
+      if (!product) return null;
+      const qty = cart[idStr];
+      return { product, qty, lineTotal: product.price * qty };
+    })
+    .filter(Boolean);
+}
+
+function cartCount() {
+  const cart = getCart();
+  return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+}
+
+function cartGrandTotal() {
+  return cartDetailed().reduce((sum, item) => sum + item.lineTotal, 0);
+}
+
+/* Keeps the little number on the "Cart" nav link in sync on every page */
+function updateCartBadge() {
+  const badge = document.getElementById("cart-badge");
+  if (!badge) return;
+  const count = cartCount();
+  badge.textContent = count;
+  badge.style.display = count > 0 ? "inline-flex" : "none";
+}
+
+/* Event delegation so "Add to cart" buttons work even on grids that
+   get re-rendered (e.g. after clicking a category filter) */
+function initAddToCartDelegation() {
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".add-cart-btn");
+    if (!btn) return;
+    const id = parseInt(btn.dataset.id, 10);
+    addToCart(id, 1);
+    const original = btn.textContent;
+    btn.textContent = "Added ✓";
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.disabled = false;
+    }, 1100);
+  });
+}
+
 /* ---------- render: product card ---------- */
 
 function productCard(p) {
@@ -153,7 +264,10 @@ function productCard(p) {
         <span class="card-cat">${p.category}</span>
         <a href="product.html?id=${p.id}"><h3 class="card-name">${p.name}</h3></a>
         <span class="card-price">${money(p.price)}</span>
-        <a class="btn btn-outline" href="product.html?id=${p.id}">View piece</a>
+        <div class="card-actions">
+          <a class="btn btn-outline" href="product.html?id=${p.id}">View piece</a>
+          <button type="button" class="btn btn-dark add-cart-btn" data-id="${p.id}">Add to cart</button>
+        </div>
       </div>
     </article>`;
 }
@@ -215,73 +329,137 @@ function renderProductDetail() {
       <div class="qty-row">
         <label for="qty">Quantity</label>
         <input type="number" id="qty" class="qty-input" value="1" min="1" max="${p.stock}">
+        <span style="font-size:12px; color:var(--ash);">${p.stock} in stock</span>
       </div>
-      <button class="btn btn-dark" id="buy-now">Buy now</button>
+      <div class="product-actions">
+        <button class="btn btn-dark" id="add-cart-detail">Add to cart</button>
+        <a class="btn btn-outline" href="cart.html">View cart</a>
+      </div>
     </div>`;
 
-  document.getElementById("buy-now").addEventListener("click", () => {
-    const qty = Math.max(1, parseInt(document.getElementById("qty").value, 10) || 1);
-    window.location.href = `checkout.html?id=${p.id}&qty=${qty}`;
+  document.getElementById("add-cart-detail").addEventListener("click", () => {
+    const qtyInput = document.getElementById("qty");
+    const qty = Math.max(1, Math.min(p.stock, parseInt(qtyInput.value, 10) || 1));
+    addToCart(p.id, qty);
+
+    const btn = document.getElementById("add-cart-detail");
+    const original = btn.textContent;
+    btn.textContent = "Added ✓";
+    setTimeout(() => { btn.textContent = original; }, 1100);
+  });
+}
+
+/* ---------- cart page ---------- */
+
+function cartRow(item) {
+  const p = item.product;
+  return `
+    <div class="cart-row">
+      <img src="${p.image}" alt="${p.name}">
+      <div class="cart-row-info">
+        <span class="cart-row-cat">${p.category}</span>
+        <h4>${p.name}</h4>
+        <span class="cart-row-price">${money(p.price)} each · ${p.stock} in stock</span>
+      </div>
+      <input type="number" class="qty-input cart-qty-input" data-id="${p.id}" value="${item.qty}" min="1" max="${p.stock}">
+      <span class="cart-row-total">${money(item.lineTotal)}</span>
+      <button type="button" class="cart-remove" data-id="${p.id}" aria-label="Remove ${p.name}">&times;</button>
+    </div>`;
+}
+
+function renderCartPage() {
+  const el = document.getElementById("cart-page");
+  if (!el) return;
+
+  const items = cartDetailed();
+
+  if (items.length === 0) {
+    el.innerHTML = `
+      <div class="cart-empty">
+        <p>Your cart is empty.</p>
+        <a href="products.html" class="btn btn-dark">Browse the collection</a>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="cart-list">${items.map(cartRow).join("")}</div>
+    <aside class="cart-summary">
+      <h3>Summary</h3>
+      <div class="line"><span>Items</span><span>${cartCount()}</span></div>
+      <div class="line total"><span>Total</span><span>${money(cartGrandTotal())}</span></div>
+      <a href="checkout.html" class="btn btn-dark" style="width:100%; text-align:center; margin-top:22px;">Proceed to checkout</a>
+      <a href="products.html" class="btn btn-outline" style="width:100%; text-align:center; margin-top:12px;">Continue shopping</a>
+    </aside>`;
+
+  el.querySelectorAll(".cart-qty-input").forEach((input) => {
+    input.addEventListener("change", () => {
+      const id = parseInt(input.dataset.id, 10);
+      setCartQty(id, parseInt(input.value, 10) || 1);
+      renderCartPage();
+    });
+  });
+
+  el.querySelectorAll(".cart-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      removeFromCart(parseInt(btn.dataset.id, 10));
+      renderCartPage();
+    });
   });
 }
 
 /* ---------- checkout page ---------- */
 
-function populateProductSelect(selectEl, selectedId) {
-  selectEl.innerHTML = PRODUCTS.map(
-    (p) =>
-      `<option value="${p.id}" ${p.id === selectedId ? "selected" : ""}>${p.name} — ${money(p.price)}</option>`
-  ).join("");
-}
+function renderCheckoutSummary() {
+  const summaryEl = document.getElementById("order-summary-lines");
+  const submitBtn = document.getElementById("submit-order");
+  if (!summaryEl || !submitBtn) return;
 
-function renderOrderSummary(p, qty) {
-  const el = document.getElementById("order-summary-lines");
-  if (!el) return;
-  el.innerHTML = `
-    <div class="line"><span>${p.name}</span><span>${money(p.price)}</span></div>
-    <div class="line"><span>Quantity</span><span>${qty}</span></div>
-    <div class="line total"><span>Total</span><span>${money(p.price * qty)}</span></div>`;
+  const items = cartDetailed();
+
+  if (items.length === 0) {
+    summaryEl.innerHTML = `<p style="font-size:14px; color:var(--ash);">Your cart is empty. <a href="products.html" style="text-decoration:underline; color:var(--ink);">Browse the collection</a>.</p>`;
+    submitBtn.disabled = true;
+    return;
+  }
+
+  summaryEl.innerHTML =
+    items
+      .map(
+        (item) =>
+          `<div class="line"><span>${item.product.name} × ${item.qty}</span><span>${money(item.lineTotal)}</span></div>`
+      )
+      .join("") +
+    `<div class="line total"><span>Total</span><span>${money(cartGrandTotal())}</span></div>`;
+  submitBtn.disabled = false;
 }
 
 function initCheckout() {
   const form = document.getElementById("checkout-form");
   if (!form) return;
 
-  const idParam = parseInt(getParam("id"), 10);
-  const qtyParam = parseInt(getParam("qty"), 10) || 1;
-  const initialProduct = PRODUCTS.find((p) => p.id === idParam) || PRODUCTS[0];
-
-  const productSelect = document.getElementById("product");
-  const qtyInput = document.getElementById("quantity");
-  populateProductSelect(productSelect, initialProduct.id);
-  qtyInput.value = qtyParam;
-
-  const updateSummary = () => {
-    const p = PRODUCTS.find((x) => x.id === parseInt(productSelect.value, 10));
-    const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
-    renderOrderSummary(p, qty);
-  };
-  productSelect.addEventListener("change", updateSummary);
-  qtyInput.addEventListener("input", updateSummary);
-  updateSummary();
+  renderCheckoutSummary();
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const msgEl = document.getElementById("form-msg");
     const submitBtn = document.getElementById("submit-order");
-    const p = PRODUCTS.find((x) => x.id === parseInt(productSelect.value, 10));
-    const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+    const items = cartDetailed();
+    if (items.length === 0) return;
 
     const payload = {
       customer_name: document.getElementById("customer_name").value.trim(),
       email: document.getElementById("email").value.trim(),
       phone: document.getElementById("phone").value.trim(),
       address: document.getElementById("address").value.trim(),
-      product_id: p.id,
-      product_name: p.name,
-      unit_price: p.price,
-      quantity: qty,
-      total: p.price * qty,
+      items: items.map((item) => ({
+        product_id: item.product.id,
+        product_name: item.product.name,
+        unit_price: item.product.price,
+        quantity: item.qty,
+        line_total: item.lineTotal,
+      })),
+      total: cartGrandTotal(),
       order_date: new Date().toISOString(),
     };
 
@@ -302,13 +480,14 @@ function initCheckout() {
       msgEl.textContent = "Order submitted. The team has been notified.";
       msgEl.classList.add("ok");
       form.reset();
-      updateSummary();
+      clearCart();
+      renderCheckoutSummary();
     } catch (err) {
       msgEl.textContent =
         "Could not reach the order system (" + err.message + "). Check the WEBHOOK_URL in script.js.";
       msgEl.classList.add("err");
-    } finally {
       submitBtn.disabled = false;
+    } finally {
       submitBtn.textContent = "Submit order";
     }
   });
@@ -425,7 +604,7 @@ function initChatbotPlaceholder() {
       document.querySelector(".chat-msg-typing")?.remove();
       appendChatMessage(reply, "bot");
     } catch (err) {
-       console.error(err);
+      console.error(err);
       document.querySelector(".chat-msg-typing")?.remove();
       appendChatMessage(
         "Could not reach the chat assistant. Check CHAT_WEBHOOK_URL in script.js.",
@@ -445,6 +624,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderHomeArrivals();
   renderProductsGrid();
   renderProductDetail();
+  renderCartPage();
   initCheckout();
   initChatbotPlaceholder();
+  initAddToCartDelegation();
+  updateCartBadge();
 });

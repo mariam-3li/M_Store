@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product — Atelier Noir</title>
+<title>Your Cart — Atelier Noir</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -15,8 +15,8 @@
     <a href="index.html" class="brand">Atelier Noir</a>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
-      <li><a href="products.html" class="active">Collection</a></li>
-      <li><a href="cart.html" class="cart-link">Cart <span id="cart-badge" class="cart-badge">0</span></a></li>
+      <li><a href="products.html">Collection</a></li>
+      <li><a href="cart.html" class="active cart-link">Cart <span id="cart-badge" class="cart-badge">0</span></a></li>
       <li><a href="checkout.html">Checkout</a></li>
     </ul>
     <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
@@ -24,7 +24,14 @@
 </nav>
 
 <section class="wrap">
-  <div class="product-detail" id="product-detail"></div>
+  <div class="section-head" style="padding-top:56px;">
+    <div>
+      <span class="kicker">Your selection</span>
+      <h2>Cart</h2>
+    </div>
+  </div>
+
+  <div class="cart-page-wrap" id="cart-page"></div>
 </section>
 
 <footer>

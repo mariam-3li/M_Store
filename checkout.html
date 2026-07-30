@@ -16,6 +16,7 @@
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="products.html">Collection</a></li>
+      <li><a href="cart.html" class="cart-link">Cart <span id="cart-badge" class="cart-badge">0</span></a></li>
       <li><a href="checkout.html" class="active">Checkout</a></li>
     </ul>
     <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
@@ -47,14 +48,6 @@
       <div class="form-field">
         <label for="address">Delivery address</label>
         <textarea id="address" name="address" required autocomplete="street-address"></textarea>
-      </div>
-      <div class="form-field">
-        <label for="product">Product</label>
-        <select id="product" name="product" required></select>
-      </div>
-      <div class="form-field">
-        <label for="quantity">Quantity</label>
-        <input type="number" id="quantity" name="quantity" min="1" value="1" required>
       </div>
       <button type="submit" class="btn btn-dark" id="submit-order">Submit order</button>
       <p class="form-msg" id="form-msg"></p>
