@@ -410,10 +410,10 @@ footer {
 /* ---------- Chatbot placeholder ---------- */
 #chatbot-placeholder {
   position: fixed;
-  bottom: 24px;
-  inset-inline-end: 24px;
-  width: 58px;
-  height: 58px;
+  bottom: 32px;
+  inset-inline-end: 32px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   background: var(--ink);
   color: var(--paper);
@@ -421,10 +421,16 @@ footer {
   align-items: center;
   justify-content: center;
   font-family: "Fraunces", serif;
-  font-size: 22px;
+  font-size: 36px;
   cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  z-index: 250;
+  box-shadow: 0 10px 28px rgba(0,0,0,.32);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+#chatbot-placeholder:hover {
+  transform: scale(1.08);
+  box-shadow: 0 14px 34px rgba(0,0,0,.38);
 }
 
 /* ---------- Chat widget: centered modal + backdrop ---------- */
