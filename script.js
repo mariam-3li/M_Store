@@ -325,9 +325,13 @@ function initCheckout() {
    n8n workflow should end with a "Respond to Webhook" node returning
    JSON like { "reply": "..." } — that text is shown as the bot message. */
 function buildChatPanel() {
+  const backdrop = document.createElement("div");
+  backdrop.id = "chat-backdrop";
+
   const panel = document.createElement("div");
   panel.id = "chat-panel";
   panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
   panel.setAttribute("aria-label", "Customer support chat");
   panel.innerHTML = `
     <div class="chat-header">
@@ -339,8 +343,10 @@ function buildChatPanel() {
       <input type="text" id="chat-input" placeholder="Type a message…" autocomplete="off" required>
       <button type="submit" id="chat-send">Send</button>
     </form>`;
-  document.body.appendChild(panel);
-  return panel;
+
+  backdrop.appendChild(panel);
+  document.body.appendChild(backdrop);
+  return { backdrop, panel };
 }
 
 function appendChatMessage(text, from) {
@@ -357,26 +363,36 @@ function initChatbotPlaceholder() {
   const bubble = document.getElementById("chatbot-placeholder");
   if (!bubble) return;
 
-  const panel = buildChatPanel();
+  const { backdrop, panel } = buildChatPanel();
   const closeBtn = document.getElementById("chat-close");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
 
   let greeted = false;
   const openPanel = () => {
-    panel.classList.add("open");
+    backdrop.classList.add("open");
     if (!greeted) {
       appendChatMessage("Hi! Ask us anything about sizing, orders or shipping.", "bot");
       greeted = true;
     }
     input.focus();
   };
-  const closePanel = () => panel.classList.remove("open");
+  const closePanel = () => backdrop.classList.remove("open");
 
   bubble.addEventListener("click", () => {
-    panel.classList.contains("open") ? closePanel() : openPanel();
+    backdrop.classList.contains("open") ? closePanel() : openPanel();
   });
   closeBtn.addEventListener("click", closePanel);
+
+  // Close when clicking the dark backdrop (outside the modal itself)
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closePanel();
+  });
+
+  // Close with the Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && backdrop.classList.contains("open")) closePanel();
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
