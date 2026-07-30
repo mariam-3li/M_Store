@@ -407,6 +407,26 @@ footer {
   gap: 14px;
 }
 
+/* ---------- Chatbot placeholder ---------- */
+#chatbot-placeholder {
+  position: fixed;
+  bottom: 24px;
+  inset-inline-end: 24px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Fraunces", serif;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+
 /* ---------- Chat widget: centered modal + backdrop ---------- */
 #chat-backdrop {
   position: fixed;
